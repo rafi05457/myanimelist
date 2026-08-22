@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id" data-theme="dark">
+<html lang="id" data-theme="dark" class="loading-lock">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -103,10 +103,38 @@ table.atbl img{width:34px;height:46px;object-fit:cover;border-radius:5px;display
 .scroll-fab:active{transform:translateY(0) scale(.93)}
 #scroll-top-fab{bottom:76px}
 @media(max-width:640px){.grid{grid-template-columns:repeat(2,1fr);gap:10px}.toolbar{flex-direction:column}.toolbar input,.toolbar select,.filter-panel{width:100%}.filter-panel{flex-direction:column}.filter-panel select{width:100%}.ms-genre{width:100%}.ms-genre-panel{left:0;right:0;min-width:0}#filter-toggle-btn,#ffav{width:100%;justify-content:center}}
+html.loading-lock,html.loading-lock body{overflow:hidden}
+.loading-screen{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:var(--bg);transition:opacity .4s ease,visibility .4s ease}
+.loading-screen.is-hiding{opacity:0;visibility:hidden;pointer-events:none}
+.loading-content{display:flex;flex-direction:column;align-items:center;gap:16px}
+.loading-mark{position:relative;width:84px;height:84px;display:flex;align-items:center;justify-content:center}
+.loading-ring{position:absolute;inset:0;width:100%;height:100%;animation:loadingSpin 1.15s linear infinite;will-change:transform}
+.loading-ring-track{fill:none;stroke:var(--border);stroke-width:3}
+.loading-ring-progress{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-dasharray:90 236.73}
+.loading-icon{position:relative;z-index:1;font-size:32px;color:var(--accent);animation:loadingPulse 1.8s ease-in-out infinite}
+@keyframes loadingSpin{to{transform:rotate(360deg)}}
+@keyframes loadingPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.08);opacity:.72}}
+.loading-text{display:flex;font-size:21px;font-weight:800;letter-spacing:-.3px;color:var(--text)}
+.loading-text span{display:inline-block;white-space:pre;opacity:0;transform:translateY(10px);animation:loadingLetter .4s ease forwards;animation-delay:calc(100ms + var(--i) * 30ms)}
+@keyframes loadingLetter{to{opacity:1;transform:translateY(0)}}
+.loading-bar{width:140px;height:3px;border-radius:999px;background:var(--border);overflow:hidden;position:relative}
+.loading-bar-fill{position:absolute;top:0;left:0;bottom:0;width:40%;border-radius:999px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:loadingBar 1.3s ease-in-out infinite;will-change:transform}
+@keyframes loadingBar{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+.loading-caption{font-size:12.5px;color:var(--text3)}
+@media(prefers-reduced-motion:reduce){.loading-ring,.loading-icon,.loading-bar-fill{animation:none!important}.loading-ring-progress{stroke-dasharray:280 46.73}.loading-text span{animation:none!important;opacity:1!important;transform:none!important}}
 </style>
 </head>
 <body>
-<div class="container">
+<div id="loading-screen" class="loading-screen" role="status" aria-live="polite" aria-label="Memuat Rafi's Collection">
+<div class="loading-content">
+<div class="loading-mark"><svg class="loading-ring" viewBox="0 0 120 120" aria-hidden="true" focusable="false"><circle class="loading-ring-track" cx="60" cy="60" r="52"></circle><circle class="loading-ring-progress" cx="60" cy="60" r="52"></circle></svg><i class="fas fa-play-circle loading-icon" aria-hidden="true"></i></div>
+<div class="loading-text" aria-hidden="true"><span style="--i:0">R</span><span style="--i:1">a</span><span style="--i:2">f</span><span style="--i:3">i</span><span style="--i:4">'</span><span style="--i:5">s</span><span style="--i:6"> </span><span style="--i:7">C</span><span style="--i:8">o</span><span style="--i:9">l</span><span style="--i:10">l</span><span style="--i:11">e</span><span style="--i:12">c</span><span style="--i:13">t</span><span style="--i:14">i</span><span style="--i:15">o</span><span style="--i:16">n</span></div>
+<div class="loading-bar" aria-hidden="true"><div class="loading-bar-fill"></div></div>
+<p class="loading-caption" aria-hidden="true">Memuat koleksi animemu…</p>
+</div>
+</div>
+<noscript><style>#loading-screen{display:none!important}</style></noscript>
+<div class="container" inert>
 <h1><i class="fas fa-play-circle" style="color:var(--accent);margin-right:8px"></i>Rafi's Collection</h1>
 <p class="sub" id="sub"></p>
 <div class="stats" id="stats"></div>
@@ -138,7 +166,7 @@ table.atbl img{width:34px;height:46px;object-fit:cover;border-radius:5px;display
 <div class="modal-bg hidden" id="modal" onclick="if(event.target===this)this.classList.add('hidden')">
 <div class="modal" style="position:relative" id="modal-body"></div>
 </div>
-<div id="theme-area">
+<div id="theme-area" inert>
 <div id="theme-menu" class="hidden">
 <button type="button" data-theme-choice="dark"><i class="fas fa-moon"></i> Mode Gelap</button>
 <button type="button" data-theme-choice="light"><i class="fas fa-sun"></i> Mode Terang</button>
@@ -260,7 +288,9 @@ function updateThemeBtn(theme){
     b.classList.toggle('active',b.dataset.themeChoice===theme);
   });
 }
-(function init(){
+const LOADING_MIN_MS=950;const loadingStart=performance.now();let loadingHidden=false;const loadingSafetyTimer=setTimeout(hideLoadingScreen,8000);
+function hideLoadingScreen(){if(loadingHidden)return;loadingHidden=true;clearTimeout(loadingSafetyTimer);const el=document.getElementById('loading-screen');if(!el)return;const wait=Math.max(0,LOADING_MIN_MS-(performance.now()-loadingStart));setTimeout(()=>{requestAnimationFrame(()=>{el.classList.add('is-hiding');const c=document.querySelector('.container');if(c)c.removeAttribute('inert');const ta=document.getElementById('theme-area');if(ta)ta.removeAttribute('inert');document.documentElement.classList.remove('loading-lock');let done=false;const finish=()=>{if(done)return;done=true;el.remove()};el.addEventListener('transitionend',finish,{once:true});setTimeout(finish,700)})},wait)}
+(function init(){try{
   initTheme();
   document.getElementById('sub').textContent=DATA.length+' anime dalam koleksi';
   const te=DATA.reduce((s,a)=>s+(parseInt(a.episodes)||0),0);
@@ -297,7 +327,7 @@ function updateThemeBtn(theme){
   window.addEventListener('resize',updateScrollFabVisibility);
   let scrollFabTicking=false;
   window.addEventListener('scroll',()=>{if(scrollFabTicking)return;scrollFabTicking=true;requestAnimationFrame(()=>{updateScrollFabVisibility();scrollFabTicking=false})},{passive:true});
-  render()})();
+  render()}finally{hideLoadingScreen()}})();
 </script>
 </body>
 </html>
